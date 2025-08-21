@@ -18,21 +18,14 @@ contract Auction {
         uint256 startTime;
         //结束时间
         uint256 endTime;
-        //是否已售出
-        bool isSold;
-    }
-    //竞拍信息结构体,可以多次竞拍同一个NFT
-    struct BidInfo {
-        //竞拍者地址
-        address bidderAddr;
-        //竞拍价格
-        uint256 bidPrice;
+        //是否有人竞价
+        bool hasBid;
     }
 
     // 拍卖的NFT
     mapping (uint256 tokenId => NftInfo owner) public nfts;
-    //NFT竞拍信息
-    mapping (uint256 tokenId => BidInfo[] bidInfos) public nfts;
+    //NFT竞价信息
+    mapping (uint256 tokenId => mapping(address bidderAddr =>uint256 bidPrice )) public bidMapping;
 
     //NFT合约
     ComprehensiveNFT public nft;
@@ -54,7 +47,7 @@ contract Auction {
             currentPrice: startPrice,
             startTime: block.timestamp,
             endTime: endTime,
-            isSold: false
+            hasBid: false
         });
 
     }
@@ -67,6 +60,41 @@ contract Auction {
         require(msg.sender !=nfts[tokenId].ownerAddr, "You cannot bid on your own NFT");
         //更新当前价格
         nfts[tokenId].currentPrice = msg.value;
+        nfts[tokenId].hasBid = true;
+        //更新竞拍者信息
+        bidMapping[tokenId][msg.sender]=msg.value;
 
     }
+    //竞拍结束，未竞拍到NFT的竞拍金额退回
+    function withdrawBid(uint256 tokenId) public { 
+        require(block.timestamp >= nfts[tokenId].endTime, "Auction has not ended");
+        require(bidMapping[tokenId][msg.sender]>0, "You have not bid on this NFT");
+        uint256 amount = bidMapping[tokenId][msg.sender];
+        bidMapping[tokenId][msg.sender]=0;
+        payable(msg.sender).transfer(amount);
+    }
+
+    }
+    //获取当前价格
+    function getCurrentPrice(uint256 tokenId) public view returns(uint256) {
+        return nfts[tokenId].currentPrice;
+    }
+    //NFT拍卖结束
+    function endAuction(uint256 tokenId) public {
+        require(nfts[tokenId].owner==msg.sender, "You are not the owner of this NFT");
+        require(nfts[tokenId].endTime<block.timestamp, "Auction has not ended yet");
+        
+        if(nfts[tokenId].hasBid){
+            //如果有人竞价
+            //转账给拍卖者
+            payable(nfts[tokenId].owner).transfer(nfts[tokenId].currentPrice);
+            //将NFT转移给最高价竞拍者
+            nft.safeTransferFrom(address(this), nfts[tokenId].bidder, tokenId);
+        }else{
+            //退还NFT给拍卖者
+            nft.safeTransferFrom(address(this), nfts[tokenId].owner, tokenId);
+        }
+         
+    }
+
 }
