@@ -34,6 +34,11 @@ contract Auction {
         nft = new ComprehensiveNFT(nftAddr);
     }
 
+    event AuctionStart(address auctioneer,uint256 tokenId, uint256 startTime);
+    event AuctionEnd(address auctioneer,uint256 tokenId, uint256 endTime);
+    event Bid(address bidder,uint256 tokenId, uint256 bidPrice);
+    event Withdraw(address bidder,uint256 tokenId, uint256 bidPrice);
+
     //上架拍卖
     function listingAuction(uint256 tokenId, uint256 startPrice, uint256 endTime) public {
         require(endTime > block.timestamp, "endTime must be in the future");
@@ -50,19 +55,23 @@ contract Auction {
             hasBid: false
         });
 
+        emit AuctionStart(msg.sender,tokenId,block.timestamp);
+
     }
 
     //竞拍
     function bid(uint256 tokenId) public payable { 
         require(nfts[tokenId].isSold == false, "NFT has been sold");
         require(block.timestamp < nfts[tokenId].endTime, "Auction has ended");
-        require(msg.value > nfts[tokenId].currentPrice, "Bid must be higher than current price");
         require(msg.sender !=nfts[tokenId].ownerAddr, "You cannot bid on your own NFT");
+        require(msg.value+bidMapping[tokenId][msg.sender] > nfts[tokenId].currentPrice, "Bid must be higher than current price");
         //更新当前价格
         nfts[tokenId].currentPrice = msg.value;
         nfts[tokenId].hasBid = true;
-        //更新竞拍者信息
-        bidMapping[tokenId][msg.sender]=msg.value;
+        //更新竞拍者信息,可多次加价
+        bidMapping[tokenId][msg.sender]+=msg.value;
+
+        emit Bid(msg.sender, tokenId, msg.value);
 
     }
     //竞拍结束，未竞拍到NFT的竞拍金额退回
@@ -72,13 +81,16 @@ contract Auction {
         uint256 amount = bidMapping[tokenId][msg.sender];
         bidMapping[tokenId][msg.sender]=0;
         payable(msg.sender).transfer(amount);
+
+        emit WithdrawBid(msg.sender, tokenId, amount);
     }
 
-    }
+    
     //获取当前价格
     function getCurrentPrice(uint256 tokenId) public view returns(uint256) {
         return nfts[tokenId].currentPrice;
     }
+    
     //NFT拍卖结束
     function endAuction(uint256 tokenId) public {
         require(nfts[tokenId].owner==msg.sender, "You are not the owner of this NFT");
@@ -94,7 +106,14 @@ contract Auction {
             //退还NFT给拍卖者
             nft.safeTransferFrom(address(this), nfts[tokenId].owner, tokenId);
         }
+        delete nfts[tokenId];
+
+        emit AuctionEnd(msg.sender,tokenId,block.timestamp);
          
     }
+
+    reveive() external payable{}
+
+    fallback() external payable{}
 
 }
