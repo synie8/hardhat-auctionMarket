@@ -10,4 +10,8 @@ npx hardhat test
 REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat ignition deploy ./ignition/modules/Lock.js
+npm install --save-dev dotenv
+npm install --save-dev @chainlink/env-enc
+npx env-enc set-pw
+npx env-enc set
 ```

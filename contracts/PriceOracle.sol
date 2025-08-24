@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract PriceOracle {
 
-    // 代币符号:预言机地址的映射 如 sepolia ETH/USD:0x694AA1769357215DE4FAC081bf1f309aDC325306
-    mapping (string pair => address dataFeedAddr) public priceFeeds;
+    // 代币地址:预言机地址的映射  
+    mapping (address tokenAdrr => address dataFeedAddr) public priceFeeds;
 
     address public owner;
 
@@ -20,15 +20,15 @@ contract PriceOracle {
     }
 
     // 添加/更新价格源
-    function setPriceFeed(string calldata pair, address dataFeedAddr) external onlyOwner {
-        priceFeeds[pair] = dataFeedAddr;
+    function setPriceFeed(address tokenAdrr, address dataFeedAddr) external onlyOwner {
+        priceFeeds[tokenAdrr] = dataFeedAddr;
     }
 
 
-    // 根据代币符号获取价格
-    function getPriceByPair(string calldata pair) external view returns (int256) {
+    //获取价格
+    function getPriceByPair(address tokenAdrr) external view returns (int256) {
 
-        address feedAddress = priceFeeds[pair];
+        address feedAddress = priceFeeds[tokenAdrr];
         require(feedAddress != address(0), "Price feed not configured");
         
         AggregatorV3Interface priceFeed = AggregatorV3Interface(feedAddress);
