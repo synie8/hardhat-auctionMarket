@@ -27,7 +27,7 @@ contract AuctionFactory is OwnableUpgradeable {
     }
     
     function initialize(address _priceOracle, address _auctionImplementation) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         priceOracle = _priceOracle;
         auctionImplementation = _auctionImplementation;
     }

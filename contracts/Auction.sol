@@ -53,7 +53,7 @@ contract Auction is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function initialize(address priceOracleAddr ) public initializer {
-        __Ownable_init(msg.sender);
+        __Ownable_init();
         __UUPSUpgradeable_init();
         priceOracle = PriceOracle(priceOracleAddr);
         factory = msg.sender;
